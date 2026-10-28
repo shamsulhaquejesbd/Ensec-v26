@@ -1,0 +1,10 @@
+{
+  "name": "Ensec ERP & Distribution Management Platform",
+  "description": "Comprehensive ERP, Manufacturing, Distribution, SCM, Finance, and Mobile Field Force Management for Ensec Lithium Batteries Bangladesh.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
