@@ -302,18 +302,18 @@ export const ManufacturingModule: React.FC = () => {
                                 title="View official Factory Delivery Order (D.O.) copy for production release authorization"
                               >
                                 <Truck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                                <span>D.O. Copy</span>
+                                <span>D.O.</span>
                               </button>
 
-                              {/* AUTO-GENERATED FACTORY CHALLAN COPY */}
+                              {/* AUTO-GENERATED FACTORY CHALLAN */}
                               <button
                                 type="button"
                                 onClick={() => setSelectedChallanForFactory(so)}
                                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 font-bold text-xs cursor-pointer border border-blue-200 dark:border-blue-800 transition-all shadow-xs"
-                                title="View auto-generated factory Challan copy (Matches uploaded sample format)"
+                                title="View auto-generated factory Challan (Matches uploaded sample format)"
                               >
                                 <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                                <span>Challan Copy</span>
+                                <span>Challan</span>
                               </button>
 
                               {/* Factory Dispatch & Invoice */}

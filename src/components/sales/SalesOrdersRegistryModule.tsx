@@ -1170,29 +1170,29 @@ export const SalesOrdersRegistryModule: React.FC<SalesOrdersRegistryModuleProps>
                             </button>
                           )}
 
-                          {/* OFFICIAL FACTORY DELIVERY ORDER (D.O.) COPY - ONLY AFTER CHECK & APPROVAL */}
+                          {/* OFFICIAL FACTORY DELIVERY ORDER (D.O.) - ONLY AFTER CHECK & APPROVAL */}
                           {so.status !== 'Submitted' && so.status !== 'Booked' && so.status !== 'Cancelled' && so.status !== 'Rejected' && (
                             <button
                               type="button"
                               onClick={() => setSelectedOrderForDO(so)}
                               className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-emerald-300 font-bold text-[11px] cursor-pointer transition-colors border border-emerald-300 dark:border-emerald-800 shadow-xs"
-                              title="View official Factory Delivery Order (D.O.) copy for release authorization"
+                              title="View official Factory Delivery Order (D.O.) for release authorization"
                             >
                               <Truck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                              <span>D.O. Copy</span>
+                              <span>D.O.</span>
                             </button>
                           )}
 
-                          {/* AUTO-GENERATED FACTORY CHALLAN COPY - ONLY AFTER CHECK & APPROVAL */}
+                          {/* AUTO-GENERATED FACTORY CHALLAN - ONLY AFTER CHECK & APPROVAL */}
                           {so.status !== 'Submitted' && so.status !== 'Booked' && so.status !== 'Cancelled' && so.status !== 'Rejected' && (
                             <button
                               type="button"
                               onClick={() => setSelectedOrderForChallan(so)}
                               className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 dark:text-blue-300 font-bold text-[11px] cursor-pointer transition-colors border border-blue-200 dark:border-blue-800 shadow-xs"
-                              title="View official Factory Challan copy (Matches uploaded sample layout)"
+                              title="View official Factory Challan (Matches uploaded sample layout)"
                             >
                               <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                              <span>Challan Copy</span>
+                              <span>Challan</span>
                             </button>
                           )}
 
@@ -2180,7 +2180,7 @@ export const SalesOrdersRegistryModule: React.FC<SalesOrdersRegistryModuleProps>
                   title="View official Factory Delivery Order"
                 >
                   <Truck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>View D.O. Copy</span>
+                  <span>View D.O.</span>
                 </button>
                 <button
                   type="button"
@@ -2193,7 +2193,7 @@ export const SalesOrdersRegistryModule: React.FC<SalesOrdersRegistryModuleProps>
                   title="View official Factory Challan"
                 >
                   <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                  <span>View Challan Copy</span>
+                  <span>View Challan</span>
                 </button>
                 <button
                   type="button"

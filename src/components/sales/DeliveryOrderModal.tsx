@@ -157,7 +157,7 @@ export const DeliveryOrderModal: React.FC<DeliveryOrderModalProps> = ({
                 title="Switch to official Factory Challan copy"
               >
                 <FileText className="w-3.5 h-3.5" />
-                <span>View Challan Copy</span>
+                <span>View Challan</span>
               </button>
             )}
 
@@ -191,7 +191,7 @@ export const DeliveryOrderModal: React.FC<DeliveryOrderModalProps> = ({
               className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm transition-all"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Print D.O. Copy</span>
+              <span>Print D.O.</span>
             </button>
 
             <button

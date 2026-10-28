@@ -183,7 +183,7 @@ export const ChallanModal: React.FC<ChallanModalProps> = ({
                 title="Switch to Delivery Order (D.O.) copy for factory warehouse & release approval"
               >
                 <Truck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span>View D.O. Copy</span>
+                <span>View D.O.</span>
               </button>
             )}
 
