@@ -13,6 +13,7 @@ import {
   FileText,
   ShieldCheck,
   CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 import { SalesOrder } from '../../types/erp.ts';
 import { useERP } from '../../context/ERPContext.tsx';
@@ -34,6 +35,7 @@ export const ChallanModal: React.FC<ChallanModalProps> = ({
 }) => {
   const { customers, distributors } = useERP();
   const [showSampleScanComparison, setShowSampleScanComparison] = useState(false);
+  const [showConfirmDispatch, setShowConfirmDispatch] = useState(false);
 
   // Find associated customer/buyer for full address and contact info
   const buyerDetails = useMemo(() => {
@@ -235,10 +237,7 @@ export const ChallanModal: React.FC<ChallanModalProps> = ({
             {onDispatchAndInvoice && (order.status === 'Approved' || order.status === 'Submitted') && (
               <button
                 type="button"
-                onClick={() => {
-                  onDispatchAndInvoice(order.id);
-                  onClose();
-                }}
+                onClick={() => setShowConfirmDispatch(true)}
                 className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-sm transition-all"
                 title="Dispatch from factory and generate commercial invoice"
               >
@@ -485,6 +484,81 @@ export const ChallanModal: React.FC<ChallanModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* CONFIRMATION MODAL: DISPATCH & INVOICE */}
+      {showConfirmDispatch && onDispatchAndInvoice && (
+        <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-6 text-slate-800 dark:text-slate-100 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="p-3 bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 rounded-2xl shrink-0">
+                <Truck className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  Confirm Factory Dispatch &amp; Invoice
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Please confirm that you want to dispatch and issue the commercial invoice for this sales order.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3.5 space-y-2 border border-slate-200 dark:border-slate-700 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Order Number:</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white">{order.orderNumber}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Buyer:</span>
+                <span className="font-semibold text-slate-900 dark:text-white truncate max-w-[200px]">{order.customerName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Factory Challan:</span>
+                <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{challanNo}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Total Units:</span>
+                <span className="font-bold text-slate-900 dark:text-white">{totalQty} units</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Net Invoice Amount:</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                  BDT {order.netAmountBDT?.toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+              <span>
+                Confirming will deduct stock from the factory warehouse, finalize the commercial tax invoice, and mark this order as ready for salesman customer handover.
+              </span>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowConfirmDispatch(false)}
+                className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowConfirmDispatch(false);
+                  onDispatchAndInvoice(order.id);
+                  onClose();
+                }}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white cursor-pointer shadow-sm transition-all"
+              >
+                <Check className="w-4 h-4" />
+                <span>Yes, Dispatch &amp; Invoice</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
