@@ -57,11 +57,13 @@ export const UserManagementModule: React.FC = () => {
     deleteUser,
     setCurrentUser,
     refreshUsers,
+    clearUsersLocalData,
     syncAllUsersToSupabase,
   } = useERP();
 
   const [activeTab, setActiveTab] = useState<'users' | 'salesmen' | 'matrix'>('users');
   const [searchTerm, setSearchTerm] = useState('');
+  const [actionNotice, setActionNotice] = useState<{ type: 'success' | 'info'; message: string } | null>(null);
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedUserForPermissions, setSelectedUserForPermissions] = useState<User | null>(null);
@@ -400,14 +402,61 @@ export const UserManagementModule: React.FC = () => {
           </button>
 
           <button
+            type="button"
+            onClick={async () => {
+              if (clearUsersLocalData) {
+                await clearUsersLocalData();
+              } else {
+                if (typeof window !== 'undefined') {
+                  localStorage.removeItem('ensec_erp_users');
+                }
+                if (refreshUsers) await refreshUsers();
+              }
+              setActionNotice({
+                type: 'success',
+                message: 'Sample mock users and local session data purged! Showing live database credentials only.',
+              });
+              setTimeout(() => setActionNotice(null), 5000);
+            }}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/40 text-red-700 dark:text-red-300 transition-all shrink-0 cursor-pointer shadow-2xs"
+            title="Purge sample mock users and wipe local session memory"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Purge Local Data</span>
+          </button>
+
+          <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm shrink-0"
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm shrink-0 cursor-pointer"
           >
             <UserPlus className="w-4 h-4" />
             <span>Create User / Salesman</span>
           </button>
         </div>
       </div>
+
+      {/* Action Notice Alert */}
+      {actionNotice && (
+        <div
+          className={`p-3 rounded-xl border text-xs flex items-center justify-between gap-3 animate-in fade-in duration-200 ${
+            actionNotice.type === 'success'
+              ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200'
+              : 'bg-blue-50 dark:bg-blue-950/60 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <span>{actionNotice.message}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActionNotice(null)}
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer font-bold"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* KPI Top Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
@@ -504,15 +553,54 @@ export const UserManagementModule: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
-                {filteredUsers.map((user) => {
-                  const perms = resolveUserPermissions(user);
-                  const allowedCount = (perms.allowedModules || []).length;
-                  const activeFeaturesCount = Object.values(perms.features || {}).filter(Boolean).length;
-                  const isCurrent = user.id === currentUser.id;
+                {filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="p-8 text-center text-slate-400">
+                      <div className="flex flex-col items-center justify-center gap-2 py-4">
+                        <Users className="w-8 h-8 text-slate-300 dark:text-slate-600" />
+                        <div className="font-semibold text-slate-700 dark:text-slate-300 text-sm">
+                          No users in directory
+                        </div>
+                        <p className="text-xs text-slate-400 max-w-sm">
+                          Sample mock data and local session memory have been removed. Add real staff accounts or synchronize from your Supabase database.
+                        </p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowCreateModal(true)}
+                            className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+                          >
+                            <UserPlus className="w-3.5 h-3.5" />
+                            <span>Create New User</span>
+                          </button>
+                          {refreshUsers && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                await refreshUsers();
+                                setActionNotice({ type: 'info', message: 'Checked Supabase database for user records.' });
+                                setTimeout(() => setActionNotice(null), 4000);
+                              }}
+                              className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-xs flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <RefreshCw className="w-3.5 h-3.5" />
+                              <span>Fetch from Database</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers.map((user) => {
+                    const perms = resolveUserPermissions(user);
+                    const allowedCount = (perms.allowedModules || []).length;
+                    const activeFeaturesCount = Object.values(perms.features || {}).filter(Boolean).length;
+                    const isCurrent = user.id === currentUser.id;
 
-                  return (
-                    <tr
-                      key={user.id}
+                    return (
+                      <tr
+                        key={user.id}
                       className={`hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors ${
                         isCurrent ? 'bg-blue-50/30 dark:bg-blue-950/20' : ''
                       }`}
@@ -644,7 +732,7 @@ export const UserManagementModule: React.FC = () => {
                       </td>
                     </tr>
                   );
-                })}
+                }))}
               </tbody>
             </table>
           </div>
@@ -676,8 +764,31 @@ export const UserManagementModule: React.FC = () => {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {salesmenList.map((salesman) => {
+            {salesmenList.length === 0 ? (
+              <div className="p-8 text-center rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-slate-400 space-y-2">
+                <Smartphone className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600" />
+                <div className="font-semibold text-slate-700 dark:text-slate-300 text-sm">
+                  No field sales representatives enrolled
+                </div>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                  Enroll territory sales officers (TSOs) or field force representatives to assign territories and quotas.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSalesman(true);
+                    setNewUserRole('Field Force');
+                    setShowCreateModal(true);
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-xs mt-1"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>+ Enroll New Salesman</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {salesmenList.map((salesman) => {
                 const perms = resolveUserPermissions(salesman);
                 const hasMobileAccess = (perms.allowedModules || []).includes('mobile-field');
                 const hasPricingRights = Boolean(perms.features?.canManageChannelPricing);
@@ -763,6 +874,7 @@ export const UserManagementModule: React.FC = () => {
                 );
               })}
             </div>
+            )}
           </div>
         </div>
       )}
@@ -792,37 +904,53 @@ export const UserManagementModule: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-[11px]">
-                {users.map((u) => {
-                  const perms = resolveUserPermissions(u);
-                  return (
-                    <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
-                      <td className="p-2.5 font-semibold sticky left-0 bg-white dark:bg-slate-900 z-10 whitespace-nowrap">
-                        <div className="text-slate-900 dark:text-white">{u.name}</div>
-                        <div className="text-[10px] text-slate-400">{u.role}</div>
-                      </td>
-                      {ALL_PAGE_MODULES.map((mod) => {
-                        const allowed = u.role === 'Super Admin' || (perms.allowedModules || []).includes(mod.id);
-                        return (
-                          <td key={mod.id} className="p-2 text-center">
-                            {allowed ? (
-                              <CheckCircle2 className="w-4 h-4 text-emerald-500 inline-block" />
-                            ) : (
-                              <XCircle className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 inline-block" />
-                            )}
-                          </td>
-                        );
-                      })}
-                      <td className="p-2 text-center whitespace-nowrap">
-                        <button
-                          onClick={() => openPermissionEditor(u)}
-                          className="px-2 py-0.5 rounded text-[10px] bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300 border border-purple-200 dark:border-purple-800 font-semibold"
-                        >
-                          Edit
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {users.length === 0 ? (
+                  <tr>
+                    <td colSpan={ALL_PAGE_MODULES.length + 2} className="p-8 text-center text-slate-400">
+                      <div className="flex flex-col items-center justify-center gap-1.5 py-4">
+                        <ShieldCheck className="w-8 h-8 text-slate-300 dark:text-slate-600 mb-1" />
+                        <div className="font-semibold text-slate-700 dark:text-slate-300 text-sm">
+                          No users enrolled for permission matrix
+                        </div>
+                        <p className="text-xs text-slate-400">
+                          Create staff accounts to configure granular module and feature clearances.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  users.map((u) => {
+                    const perms = resolveUserPermissions(u);
+                    return (
+                      <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                        <td className="p-2.5 font-semibold sticky left-0 bg-white dark:bg-slate-900 z-10 whitespace-nowrap">
+                          <div className="text-slate-900 dark:text-white">{u.name}</div>
+                          <div className="text-[10px] text-slate-400">{u.role}</div>
+                        </td>
+                        {ALL_PAGE_MODULES.map((mod) => {
+                          const allowed = u.role === 'Super Admin' || (perms.allowedModules || []).includes(mod.id);
+                          return (
+                            <td key={mod.id} className="p-2 text-center">
+                              {allowed ? (
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500 inline-block" />
+                              ) : (
+                                <XCircle className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 inline-block" />
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td className="p-2 text-center whitespace-nowrap">
+                          <button
+                            onClick={() => openPermissionEditor(u)}
+                            className="px-2 py-0.5 rounded text-[10px] bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300 border border-purple-200 dark:border-purple-800 font-semibold"
+                          >
+                            Edit
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -1693,7 +1821,27 @@ export const UserManagementModule: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (clearUsersLocalData) {
+                      await clearUsersLocalData();
+                    } else {
+                      if (typeof window !== 'undefined') localStorage.removeItem('ensec_erp_users');
+                      if (refreshUsers) await refreshUsers();
+                    }
+                    setSyncAllFeedback({
+                      type: 'success',
+                      message: 'Local session cache and sample users purged! Only Supabase records are loaded.',
+                    });
+                  }}
+                  className="px-3 py-1.5 rounded-xl border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 font-semibold flex items-center gap-1.5 cursor-pointer text-xs"
+                  title="Purge local session memory cache"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Purge Local Cache</span>
+                </button>
                 <button
                   type="button"
                   onClick={async () => {

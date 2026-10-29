@@ -143,6 +143,7 @@ interface ERPContextType {
   updateUserPermissions: (userId: string, permissions: UserPermissions) => void;
   deleteUser: (userId: string) => void;
   refreshUsers?: () => Promise<void>;
+  clearUsersLocalData?: () => Promise<void>;
   syncAllUsersToSupabase?: () => Promise<{ success: boolean; count: number; error?: string; sqlFix?: string }>;
   currentUserHasPermission: (moduleId: string) => boolean;
   currentUserHasFeature: (featureKey: keyof FeaturePermissions) => boolean;
@@ -476,20 +477,61 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  // User & Authentication state
+  const DEFAULT_ROOT_ADMIN: User = {
+    id: 'u-admin-root',
+    userId: 'ADMIN',
+    password: 'ensec2026',
+    name: 'Super Admin',
+    email: 'admin@ensecbd.com',
+    role: 'Super Admin',
+    designation: 'Managing Director / System Administrator',
+    department: 'Management',
+    status: 'Active',
+    permissions: getDefaultPermissionsForRole('Super Admin'),
+  };
+
+  // User & Authentication state (Purges mock sample users and local session memory data)
   const [users, setUsers] = useState<User[]>(() => {
+    const SAMPLE_USER_IDS = new Set(['u-1', 'u-2', 'u-3', 'u-4', 'u-5', 'u-6', 'u-7', 'u-8', 'u-raju']);
+    const SAMPLE_EMP_IDS = new Set(['EMP-001', 'EMP-002', 'EMP-003', 'EMP-004', 'EMP-005', 'EMP-006', 'EMP-007', 'EMP-008', 'EMP-010']);
+    const SAMPLE_MOCK_EMAILS = new Set([
+      'sohidul@ensecbd.com',
+      'tanvir.sales@ensecbd.com',
+      'mustafiz.kushtia@ensecbd.com',
+      'kamrul.accounts@ensecbd.com',
+      'rafiqul.dhaka1@ensecbd.com',
+      'zubair.field@ensecbd.com',
+      'shakil.ctg@ensecbd.com',
+      'asif.kushtia@ensecbd.com',
+      'raju.hos@ensecbd.com',
+    ]);
+
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('ensec_erp_users');
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          if (Array.isArray(parsed)) {
+            // Filter out any mock sample users from local session storage
+            const realUsers = parsed.filter(
+              (u) =>
+                u &&
+                u.id &&
+                !SAMPLE_USER_IDS.has(u.id) &&
+                !SAMPLE_EMP_IDS.has(u.userId) &&
+                !SAMPLE_MOCK_EMAILS.has(u.email?.toLowerCase())
+            );
+            if (realUsers.length !== parsed.length) {
+              localStorage.setItem('ensec_erp_users', JSON.stringify(realUsers));
+            }
+            return realUsers;
+          }
         } catch {
           // fallback
         }
       }
     }
-    return INITIAL_USERS;
+    return [];
   });
 
   useEffect(() => {
@@ -501,7 +543,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentUser, setCurrentUser] = useState<User>(() => {
     const savedUid = typeof window !== 'undefined' ? localStorage.getItem('ensec_erp_uid') : null;
     const found = savedUid ? users.find((u) => u.id === savedUid) : null;
-    return found || users[0] || INITIAL_USERS[0];
+    return found || users[0] || DEFAULT_ROOT_ADMIN;
   });
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return typeof window !== 'undefined' && localStorage.getItem('ensec_erp_auth') === 'true';
@@ -1563,86 +1605,70 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           .select('*')
           .order('id', { ascending: true });
 
-        if (!error && Array.isArray(data) && data.length > 0) {
-          setUsers((prev) => {
-            const userMap = new Map<string, User>();
-            // 1. Index current users
-            prev.forEach((u) => {
-              if (u.id) userMap.set(u.id, u);
-              if (u.email) userMap.set(u.email.toLowerCase(), u);
-            });
+        if (!error && Array.isArray(data)) {
+          const mappedUsers: User[] = data.map((row: any) => ({
+            id: row.uid ? String(row.uid) : `u-sb-${row.id}`,
+            userId:
+              row.uid ||
+              (row.email ? row.email.split('@')[0].toUpperCase() : `EMP-${row.id}`),
+            name: row.name || 'Staff User',
+            email: row.email || '',
+            password:
+              row.password !== undefined && row.password !== null && row.password !== ''
+                ? String(row.password)
+                : 'ensec2026',
+            phone: row.phone || '',
+            role: (row.role as any) || 'Field Force',
+            designation: row.designation || '',
+            department: row.department || '',
+            status:
+              row.status === 'Inactive'
+                ? 'Inactive'
+                : row.status === 'Blocked'
+                ? 'Blocked'
+                : 'Active',
+            avatar: row.avatar,
+            permissions: resolveUserPermissions({
+              role: (row.role as any) || 'Field Force',
+              permissions:
+                typeof row.permissions === 'string'
+                  ? (() => {
+                      try {
+                        return JSON.parse(row.permissions);
+                      } catch {
+                        return null;
+                      }
+                    })()
+                  : row.permissions,
+            }),
+            isSalesman:
+              row.is_salesman ??
+              (row.role === 'Field Force' ||
+                row.role === 'Sales Head' ||
+                row.role === 'Territory Sales Officer'),
+            salesmanCode: row.salesman_code || row.salesmancode,
+            monthlySalesTargetBDT: row.monthly_target_bdt || row.monthlysalestargetbdt,
+            createdAt: row.created_at,
+          }));
 
-            // 2. Merge Supabase user rows
-            data.forEach((row: any) => {
-              const emailKey = row.email ? String(row.email).toLowerCase() : '';
-              const existing = emailKey ? userMap.get(emailKey) : null;
-              const mappedUser: User = {
-                id: existing?.id || (row.uid ? String(row.uid) : `u-sb-${row.id}`),
-                userId:
-                  row.uid ||
-                  existing?.userId ||
-                  (row.email ? row.email.split('@')[0].toUpperCase() : `EMP-${row.id}`),
-                name: row.name || existing?.name || 'Staff User',
-                email: row.email || existing?.email || '',
-                password:
-                  row.password !== undefined && row.password !== null && row.password !== ''
-                    ? String(row.password)
-                    : existing?.password || 'ensec2026',
-                phone: row.phone || existing?.phone,
-                role: (row.role as any) || existing?.role || 'Field Force',
-                designation: row.designation || existing?.designation,
-                department: row.department || existing?.department,
-                status:
-                  row.status === 'Inactive'
-                    ? 'Inactive'
-                    : row.status === 'Blocked'
-                    ? 'Blocked'
-                    : 'Active',
-                avatar: row.avatar || existing?.avatar,
-                permissions: resolveUserPermissions({
-                  role: (row.role as any) || existing?.role || 'Field Force',
-                  permissions:
-                    typeof row.permissions === 'string'
-                      ? (() => {
-                          try {
-                            return JSON.parse(row.permissions);
-                          } catch {
-                            return null;
-                          }
-                        })()
-                      : row.permissions || existing?.permissions,
-                }),
-                isSalesman:
-                  existing?.isSalesman ||
-                  row.role === 'Field Force' ||
-                  row.role === 'Sales Head' ||
-                  row.role === 'Territory Sales Officer',
-                salesmanCode: existing?.salesmanCode,
-                monthlySalesTargetBDT: existing?.monthlySalesTargetBDT,
-                createdAt: row.created_at || existing?.createdAt,
-              };
-
-              if (emailKey) userMap.set(emailKey, mappedUser);
-              userMap.set(mappedUser.id, mappedUser);
-            });
-
-            const uniqueUsers: User[] = [];
-            const seen = new Set<string>();
-            userMap.forEach((u) => {
-              const k = u.email ? u.email.toLowerCase() : u.id;
-              if (!seen.has(k)) {
-                seen.add(k);
-                uniqueUsers.push(u);
-              }
-            });
-
-            return uniqueUsers.length > 0 ? uniqueUsers : prev;
-          });
+          setUsers(mappedUsers);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('ensec_erp_users', JSON.stringify(mappedUsers));
+          }
         }
       } catch (err) {
         console.warn('Supabase refreshUsers notice:', err);
       }
     }
+  };
+
+  const clearUsersLocalData = async () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('ensec_erp_users');
+    }
+    setUsers([]);
+    await refreshUsers();
+    addAuditLog('SAMPLE_DATA_PURGED', 'User Management', 'Purged sample and local session user memory data');
   };
 
   const refreshSalesOrders = async () => {
@@ -7327,6 +7353,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateUserPermissions,
         deleteUser,
         refreshUsers,
+        clearUsersLocalData,
         syncAllUsersToSupabase,
         currentUserHasPermission,
         currentUserHasFeature,
